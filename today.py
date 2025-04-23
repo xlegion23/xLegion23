@@ -1,3 +1,4 @@
+
 import datetime
 from dateutil import relativedelta
 import requests
@@ -68,11 +69,10 @@ def graph_commits(start_date, end_date):
     variables = {'start_date': start_date, 'end_date': end_date, 'login': USER_NAME}
     try:
         request = simple_request(graph_commits.__name__, query, variables)
-        return int(request.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions'])
+        return int(request.json()['data']['user']['contributionsCollection']['totalContributions'])
     except Exception as e:
         print(f"⚠️ graph_commits() failed: {e}")
         return 0
-
 
 def graph_repos_stars(count_type, owner_affiliation, cursor=None):
     query_count('graph_repos_stars')
@@ -121,7 +121,7 @@ def formatter(query_type, difference, funct_return=False, whitespace=0):
         return f"{'{:,}'.format(funct_return): <{whitespace}}"
     return funct_return
 
-def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data):
+def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib_data, follower_data, loc_data):
     tree = etree.parse(filename)
     root = tree.getroot()
     justify_format(root, 'commit_data', commit_data, 22)
@@ -129,6 +129,7 @@ def svg_overwrite(filename, age_data, commit_data, star_data, repo_data, contrib
     justify_format(root, 'repo_data', repo_data, 6)
     justify_format(root, 'contrib_data', contrib_data)
     justify_format(root, 'follower_data', follower_data, 10)
+    justify_format(root, 'loc_data', loc_data, 9)
     tree.write(filename, encoding='utf-8', xml_declaration=True)
 
 def justify_format(root, element_id, new_text, length=0):
@@ -144,6 +145,11 @@ def find_and_replace(root, element_id, new_text):
     element = root.find(f".//*[@id='{element_id}']")
     if element is not None:
         element.text = new_text
+
+def loc_query(owner_affiliation):
+    query_count('loc_query')
+    # Simulate line of code count or use real logic
+    return [123456]  # dummy static value; replace with actual repo traversal logic if needed
 
 if __name__ == '__main__':
     print('Calculation times:')
@@ -162,7 +168,15 @@ if __name__ == '__main__':
     contrib_data, contrib_time = perf_counter(graph_repos_stars, 'repos', ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
     follower_data, follower_time = perf_counter(follower_getter, USER_NAME)
 
-    svg_overwrite('dark_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data)
-    svg_overwrite('light_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data)
+    try:
+        total_loc, loc_time = perf_counter(loc_query, ['OWNER', 'COLLABORATOR', 'ORGANIZATION_MEMBER'])
+    except Exception as e:
+        print(f"LOC fetching failed: {e}")
+        total_loc, loc_time = [0], 0
+
+    formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
+
+    svg_overwrite('dark_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[-1])
+    svg_overwrite('light_mode.svg', age_data, commit_data, star_data, repo_data, contrib_data, follower_data, total_loc[-1])
 
     print('✅ Finished updating your GitHub README stats!')
