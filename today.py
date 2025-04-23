@@ -450,7 +450,7 @@ if __name__ == '__main__':
     age_data, age_time = perf_counter(daily_readme, datetime.datetime(2002, 7, 5))
     formatter('age calculation', age_time)
     total_loc, loc_time = 0, 0  # LOC fetching disabled
-    formatter('LOC (cached)', loc_time) if total_loc[-1] else formatter('LOC (no cache)', loc_time)
+    formatter('LOC disabled', loc_time)
     commit_data, commit_time = perf_counter(commit_counter, 7)
     star_data, star_time = perf_counter(graph_repos_stars, 'stars', ['OWNER'])
     repo_data, repo_time = perf_counter(graph_repos_stars, 'repos', ['OWNER'])
